@@ -1,0 +1,156 @@
+/* 1.  Consider a database with the following schema:
+ *
+ * Person ( name, age, gender )    name is a key
+ * Frequents ( name, pizzeria )   (name, pizzeria) is a key
+ * Eats ( name, pizza )   (name, pizza) is a key
+ * Serves ( pizzeria, pizza, price )  (pizzeria, pizza) is a key
+ * 
+ * Write relational algebra expressions for the following nine queries. 
+ *(Warning: some of the later queries are a bit challenging.)
+ *
+ * see "sample.db" for schema and data
+ */
+ 
+/* a. Find all pizzerias frequented by at least one person under the age of 18. */
+
+\project_{pizzeria} 
+    (
+	    \select_{age<18}(Person \join Frequents)
+	);
+
+
+
+/* b. Find the names of all females who eat either mushroom or pepperoni pizza (or both). */
+
+\project_{name}
+    (
+	\select_{gender='female' and 
+             (pizza="mushroom" or pizza="pepperoni")} 
+    (Person \join Eats)
+	);
+
+
+
+/* c. Find the names of all females who eat both mushroom and pepperoni pizza. */
+
+    (
+    \project_{name}
+        (
+        \select_{gender='female' and pizza='mushroom'}
+        (Person \join Eats)
+        )
+    )
+\intersect
+    (
+    \project_{name}
+        (
+        \select_{gender='female' and pizza='pepperoni'}
+        (Person \join Eats)
+        )
+    );
+
+
+
+/* d. Find all pizzerias that serve at least one pizza that Amy eats for less than $10.00. */
+
+\project_{pizzeria}
+    (
+    \select_{name='Amy' and price<10}
+    (Serves \join Eats)
+    );
+
+
+
+/* e. Find all pizzerias that are frequented by only females or only males. */
+
+    \project_{pizzeria}(Frequents)
+\diff
+    (
+        (
+        \project_{pizzeria}
+            (
+            \select_{gender='female'}
+            (Person \join Frequents)
+            )
+        )
+    \intersect
+        (
+        \project_{pizzeria}
+            (
+            \select_{gender='male'}
+            (Person \join Frequents)
+            )
+        )
+    );
+
+
+
+/* f. For each person, find all pizzas the person eats that are not served by any pizzeria the person frequents. 
+ * Return all such person (name) / pizza pairs. */
+ 
+    Eats 
+\diff
+    (
+    \project_{name, pizza}(Serves \join Frequents)
+    );
+ 
+ 
+ 
+/* g. Find the names of all people who frequent only pizzerias serving at least one pizza they eat. */
+
+    \project_{name} (Frequents)
+\diff
+    (
+        \project_{name}
+            (
+                Frequents
+            \diff
+                (\project_{name, pizzeria} (Serves \join Eats))
+            )
+    );
+
+
+
+/* h. Find the names of all people who frequent every pizzeria serving at least one pizza they eat. */
+
+    \project_{name} (Frequents)
+\diff
+    (
+    \project_{name}
+        (
+            (\project_{name, pizzeria} (Serves \join Eats))
+        \diff
+            Frequents
+        )
+    );
+
+
+
+/* i. Find the pizzeria serving the cheapest pepperoni pizza. In the case of ties, return all of the cheapest-pepperoni pizzerias. */
+
+    \project_{pizzeria}
+    (\select_{pizza='pepperoni'}Serves)
+
+\diff
+
+    \project_{pizzeria1}
+    (
+        \select_{price1>price2}
+        (
+                (
+	            \rename_{pizzeria1, price1} 
+                    (
+                    \project_{pizzeria, price}
+                    (\select_{pizza='pepperoni'} Serves)
+                    )
+                )
+            \cross
+                (
+                \rename_{pizzeria2, price2} 
+                    (
+                    \project_{pizzeria, price}
+                    (\select_{pizza='pepperoni'} Serves)
+                    )
+                )
+        )
+    );
